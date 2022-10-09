@@ -25,11 +25,22 @@ struct Front {
 
 struct Crowding {
 	int a;
-	double f;
-	bool operator < (const Crowding &c) const {
-		return f < c.f;
-	}
+	double f1;
+	double f2;
+	double dis;
 };
+
+bool dcd_f1_cmp(Crowding a, Crowding b) {
+	return a.f1 < b.f1;
+}
+
+bool dcd_f2_cmp(Crowding a, Crowding b) {
+	return a.f2 < b.f2;
+}
+
+bool dcd_cmp(Crowding a, Crowding b) {
+	return a.dis > b.dis;
+}
 
 int n_par;
 int n_chi;
@@ -95,27 +106,47 @@ void nsga2_fnds()
 	front_size = i - 1;
 }
 
-
 /*
- * Crowding-distance-assignment
+ * Dynamic Crowding-distance-assignment
 */
-void nsga2_cda(Front &front)
+void nsga2_dcda(Front &front)
 {
-	int i, j;
-	for (i = 0; i < front.n; i++)
-		population[front.f[i]].dis = 0;
+	for(int i = 0;i < front.n;i ++) {
+		crowding[i].a = front.f[i];
+		crowding[i].f1 = population[crowding[i].a].s.length;
+		crowding[i].f2 = population[crowding[i].a].s.fairness;
+		crowding[i].dis = population[front.f[i]].dis =0;
+	}
+	
+	for(int i = 0;i < front.n - 1;i ++) {
 
-	for (i = 0; i < 2; i++) {
-		for (j = 0; j < front.n; j++) {
-			crowding[j].f = ((i == 0) ? population[front.f[j]].s.fairness : population[front.f[j]].s.length);
-			crowding[j].a = front.f[j];
+		for(int j = 0;j < front.n - i;j ++) {
+			crowding[j].dis = 0;
 		}
-		sort(crowding, crowding + front.n);
-		population[crowding[0].a].dis = inf;
-		population[crowding[front.n - 1].a].dis = inf;
-		for (j = 1; j < front.n - 1; j++)
-			if (population[crowding[j].a].dis < inf)
-				population[crowding[j].a].dis += (crowding[j + 1].f - crowding[j - 1].f) / (crowding[front.n - 1].f - crowding[0].f);
+		
+		sort(crowding, crowding + front.n - i, dcd_f1_cmp);
+		crowding[0].dis += inf;
+		crowding[front.n - i - 1].dis += inf;
+		for(int j = 1;j < front.n - i - 1;j ++) {
+			if(crowding[j].dis < inf) {
+				crowding[j].dis += (crowding[j + 1].f1 - crowding[j - 1].f1) / (crowding[front.n - i - 1].f1 - crowding[0].f1);
+			}
+		}
+
+		sort(crowding, crowding + front.n - i, dcd_f2_cmp);
+		crowding[0].dis += inf;
+		crowding[front.n - i - 1].dis += inf;
+		for(int j = 1;j < front.n - i - 1;j ++) {
+			if(crowding[j].dis < inf) {
+				crowding[j].dis += (crowding[j + 1].f1 - crowding[j - 1].f1) / (crowding[front.n - i - 1].f1 - crowding[0].f1);
+			}
+		}
+
+		sort(crowding, crowding + front.n - i, dcd_cmp);
+	}
+
+	for(int i = 0;i < front.n;i ++) {
+		population[crowding[i].a].dis = crowding[i].dis;
 	}
 }
 
@@ -353,7 +384,7 @@ void nsga2(string filename)
 				p1[np1++] = population[front[i].f[j]];
 			i++;
 		}
-		nsga2_cda(front[i]);
+		nsga2_dcda(front[i]);
 		sort(front[i].f, front[i].f + front[i].n, nsga2_cmp);
 		for (j = 0; np1 < n_par; j++)
 			p1[np1++] = population[front[i].f[j]];
