@@ -1,6 +1,6 @@
 #include <ctime>
 #include "ls.h"
-#include "lns.h"
+#include "alns.h"
 #include "utility.h"
 #include "datahandler.h"
 #include "recombination.h"
@@ -322,14 +322,14 @@ void nsga2_local_search()
 		{
 		weight[0] = 1; weight[1] = 0;
 		Solution &s = tournament(weight);
-		LNS(s);
+		ALNS(s);
 		local_search_operator(s, weight, ls_iter);
 		}
 
 		{
 		weight[0] = 0; weight[1] = 1;
 		Solution &s = tournament(weight);
-		LNS(s);
+		ALNS(s);
 		local_search_operator(s, weight, ls_iter);
 		}
 
